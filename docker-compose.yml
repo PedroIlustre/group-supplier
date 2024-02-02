@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  group-supplier:
+    image: group-supplier
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: always
