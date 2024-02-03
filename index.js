@@ -8,39 +8,48 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.post('/process', (req, res) => {
-	const filePath = req.body.filePath;
+app.post('/process', async (req, res) => {
+	try {
+		const filePath = req.body.filePath;
 
-	if (!filePath) {
-		return res.status(400).json({ error: 'O caminho do arquivo CSV é obrigatório.' });
-	}
+		if (!filePath) {
+			return res.status(400).json({ error: 'O caminho do arquivo CSV é obrigatório.' });
+		}
 
-	const data = [];
+		const data = [];
 
-	fs.createReadStream(filePath)
-		.pipe(csv({ separator: '\t' }))
-		.on('data', (row) => {
-			data.push(row);
-		})
-		.on('end', () => {
-			const groupedData = _.groupBy(data, 'Fornecedor');
-			const result = Object.entries(groupedData).map(([fornecedor, produtos]) => ({
-				Fornecedor: fornecedor,
-				Produtos: produtos.map((produto) => ({
-					Categoria: produto['Categoria'],
-					ID: produto['ID Produto'],
-					Codigo: produto['Código'],
-					CodigoBarras: produto['Código de Barras'],
-					Produto: produto['Produto'],
-					Descontinuado: produto['Descontinuado'],
-					UnitarioCusto: produto['Unitário - Custo'],
-				})),
-			}));
+		await new Promise((resolve, reject) => {
+			const stream = fs.createReadStream(filePath);
 
-			res.json(result);
+			stream.on('error', (error) => {
+				reject(error);
+			});
+
+			stream
+				.pipe(csv({ separator: ',' })) // Alterado para ',' como separador
+				.on('data', (row) => {
+					data.push(row);
+				})
+				.on('end', () => {
+					resolve();
+				})
+				.on('error', (error) => {
+					reject(error);
+				});
 		});
-});
 
+		const groupedData = _.groupBy(data, 'Fornecedor');
+		const result = Object.entries(groupedData).map(([fornecedor, produtos]) => ({
+			Fornecedor: fornecedor || 'N/A',
+			Produtos: produtos.map((produto) => produto),
+		}));
+
+		res.json(result);
+	} catch (error) {
+		console.error('Erro durante o processamento do CSV:', error);
+		res.status(500).json({ error: `Ocorreu um erro durante o processamento do CSV: ${error.message}` });
+	}
+});
 
 app.listen(port, () => {
 	console.log(`Servidor rodando em http://localhost:${port}`);
