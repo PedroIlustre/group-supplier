@@ -3,6 +3,9 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const _ = require('lodash');
 const cors = require('cors');
+const multer = require('multer');
+const { Readable } = require('stream');
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,18 +13,21 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-app.post('/process', async (req, res) => {
-	try {
-		const filePath = req.body.filePath;
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-		if (!filePath) {
-			return res.status(400).json({ error: 'O caminho do arquivo CSV é obrigatório.' });
+app.post('/process', upload.single('file'), async (req, res) => {
+	try {
+		const buffer = req.file.buffer;
+
+		if (!buffer) {
+			return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
 		}
 
 		const data = [];
 
 		await new Promise((resolve, reject) => {
-			const stream = fs.createReadStream(filePath);
+			const stream = Readable.from(buffer);
 
 			stream.on('error', (error) => {
 				reject(error);
