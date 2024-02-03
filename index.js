@@ -26,7 +26,7 @@ app.post('/process', async (req, res) => {
 			});
 
 			stream
-				.pipe(csv({ separator: ',' })) // Alterado para ',' como separador
+				.pipe(csv({ separator: ',' }))
 				.on('data', (row) => {
 					data.push(row);
 				})
@@ -41,7 +41,9 @@ app.post('/process', async (req, res) => {
 		const groupedData = _.groupBy(data, 'Fornecedor');
 		const result = Object.entries(groupedData).map(([fornecedor, produtos]) => ({
 			Fornecedor: fornecedor || 'N/A',
-			Produtos: produtos.map((produto) => produto),
+			Produtos: produtos
+				.filter((produto) => produto.Descontinuado.toLowerCase() !== 'sim')
+				.map(({ Fornecedor, ...produto }) => produto),
 		}));
 
 		res.json(result);
