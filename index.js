@@ -2,10 +2,12 @@ const express = require('express');
 const fs = require('fs');
 const csv = require('csv-parser');
 const _ = require('lodash');
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(cors());
 app.use(express.json());
 
 app.post('/process', async (req, res) => {
